@@ -1,0 +1,125 @@
+esphome:
+  name: my-esphome-test
+  friendly_name: my-esphome-test
+
+
+esp32:
+  # dfrobot_firebeetle2_esp32e
+  board:  firebeetle32 #esp32dev
+  framework:
+    type: arduino
+
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "+Z/UPNulIp8xqW9wsAVDMyksbT//xIITKEGIaRyUPfY="
+
+ota:
+  password: "4ac11d96ed0857817221895d8e2ccb51"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "My-Esphome-Test Fallback Hotspot"
+    password: "lJPzKdcm22jR"
+
+captive_portal:
+
+globals:
+  # Value to consider completely dry. Auto-calibrated.
+  - id: dryValue
+    type: double
+    restore_value: yes
+    initial_value: '1.8'
+  # Value to consider completely wet. Auto-calibrated.
+  - id: wetValue
+    type: double
+    restore_value: yes
+    initial_value: '1.8'
+
+light:
+  - platform: esp32_rmt_led_strip
+    rgb_order: GRB
+    pin: GPIO5
+    num_leds: 30
+    rmt_channel: 0
+    chipset: ws2812
+    name: "On Board Light"
+    id: onboardlight
+    restore_mode: ALWAYS_OFF
+
+
+sensor:
+  - platform: adc
+    pin: GPIO36
+    name: "sage"
+    device_class: Moisture
+    id: sage1
+    attenuation: auto
+    update_interval: 15s
+    unit_of_measurement: '%'
+    icon: "mdi:water-percent"
+    filters:    
+      - lambda: !lambda |-
+          if (id(dryValue) < x) {
+            // Auto-calibrate dryValue
+            id(dryValue) = x;
+          }
+          if (id(wetValue) > x) {
+          // Auto-calibrate wetValue
+            id(wetValue) = x;
+          }
+          // Scale x: dryValue->wetValue, 0->100
+          return (x - id(dryValue)) * (100 - 0) / (id(wetValue) - id(dryValue)) + 0;
+    accuracy_decimals: 2    
+  - platform: adc
+    pin: GPIO39
+    name: "rosemary"
+    device_class: Moisture
+    id: rosemary1
+    attenuation: auto
+    update_interval: 15s
+    unit_of_measurement: '%'
+    icon: "mdi:water-percent"
+    filters:    
+      - lambda: !lambda |-
+          if (id(dryValue) < x) {
+            // Auto-calibrate dryValue
+            id(dryValue) = x;
+          }
+          if (id(wetValue) > x) {
+          // Auto-calibrate wetValue
+            id(wetValue) = x;
+          }
+          // Scale x: dryValue->wetValue, 0->100
+          return (x - id(dryValue)) * (100 - 0) / (id(wetValue) - id(dryValue)) + 0;
+    accuracy_decimals: 2
+  - platform: adc
+    pin: GPIO34
+    name: "parsley"
+    device_class: Moisture
+    id: parsley1
+    attenuation: auto
+    update_interval: 15s
+    unit_of_measurement: '%'
+    icon: "mdi:water-percent"
+    filters:    
+      - lambda: !lambda |-
+          if (id(dryValue) < x) {
+            // Auto-calibrate dryValue
+            id(dryValue) = x;
+          }
+          if (id(wetValue) > x) {
+          // Auto-calibrate wetValue
+            id(wetValue) = x;
+          }
+          // Scale x: dryValue->wetValue, 0->100
+          return (x - id(dryValue)) * (100 - 0) / (id(wetValue) - id(dryValue)) + 0;
+    accuracy_decimals: 2    
