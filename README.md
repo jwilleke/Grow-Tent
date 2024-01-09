@@ -10,7 +10,7 @@ We are currenlty using three of these senors.
 - sage
 - parsley
 
-> NOTE: One of the sensors cables was wired wrong which was very trobling.
+> NOTE: One of the sensors cables was wired wrong which was very trobling. Check everything!
 
 Specifications:
 
