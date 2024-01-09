@@ -6,7 +6,9 @@ We used the [diymore 5pcs Capacitive Soil Moisture Sensor Module](https://www.am
 
 We are currenlty using three of these senors.
 
-- rosemary 
+- rosemary
+- sage
+- parsley
 
 > NOTE: One of the sensors cables was wired wrong which was very trobling.
 
@@ -27,13 +29,21 @@ These were the ranges acorss the three sensors.
 - Sage - For testing this was in water (2.02 - 2.07 v)
 - parsley - For testing this was in soil (.910 - .930 v)
 
-We will scale from as
+We will scale from 0-100% and this code seems to work well and auto adjust the scaling.
 
 ``` yaml
-    filters:
-     - calibrate_linear:
-      - .935 -> 100 (i.e 100 % wet)
-      - 2.0 -> 0 (i.e. VERY DRY)
+    filters:    
+      - lambda: !lambda |-
+          if (id(dryValue) < x) {
+            // Auto-calibrate dryValue
+            id(dryValue) = x;
+          }
+          if (id(wetValue) > x) {
+          // Auto-calibrate wetValue
+            id(wetValue) = x;
+          }
+          // Scale x: dryValue->wetValue, 0->100
+          return (x - id(dryValue)) * (100 - 0) / (id(wetValue) - id(dryValue)) + 0;
 ```
 
 Our intent is to use home assistant to inturprut the poits where the plants require water.
