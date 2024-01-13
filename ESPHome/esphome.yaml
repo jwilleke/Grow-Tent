@@ -36,6 +36,7 @@ external_components:
   - source: github://latonita/esphome-veml7700
     components: [ veml7700 ]
     
+i2c:
   sda: 21
   scl: 22
   scan: true
