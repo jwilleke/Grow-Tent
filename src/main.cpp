@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <DFRobot_SHT3x.h>
+#include "DFRobot_VEML7700.h"
 
 // https://dronebotworkshop.com/soil-moisture/
 #define SENSOR_ONE_PIN A0   // ESP32 pin GPIO36 (ADC0) that connects to AOUT pin of moisture sensor
@@ -8,8 +9,12 @@
 #define SENSOR_THREE_PIN A2 // A2-GPIO34
 #define THRESHOLD 5000      // CHANGE YOUR THRESHOLD HERE
 
+/*
+ * Instantiate an objects to drive the sensors
+ */
 // DFRobot_SHT3x sht3x(&Wire,/*address=*/0x45,/*RST=*/4);
 DFRobot_SHT3x sht3x;
+DFRobot_VEML7700 als;
 
 const int numReadings = 1000;
 
@@ -40,6 +45,7 @@ void setup()
 {
   Serial.begin(115200); // open serial port, set the baud rate as 9600 bps
   Wire.begin();
+  als.begin(); // Init
   Serial.print("intervals: ");
   Serial.println(intervals);
   for (int thisReading = 0; thisReading < numReadings; thisReading++)
@@ -121,7 +127,7 @@ void loop()
 
     // calculate the average:
     average = total / numReadings;
-    
+
     // Get Temperature and Humidity
     Serial.print("   Ambient Temperature(°C/F):");
     /**
@@ -142,8 +148,13 @@ void loop()
      * @return Return float humidity data
      */
     Serial.print(sht3x.getHumidityRH());
-    Serial.println(" %RH");
+    Serial.printl(" %RH");
+    float lux;
 
+    als.getALSLux(lux); // Get the measured ambient light value
+    Serial.print("   Lux:");
+    Serial.print(lux);
+    Serial.println(" lx");
     lastmillis = millis();
   }
 }
