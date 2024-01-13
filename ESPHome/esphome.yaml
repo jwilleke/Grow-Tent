@@ -32,11 +32,16 @@ wifi:
 
 captive_portal:
 
+external_components:
+  - source: github://latonita/esphome-veml7700
+    components: [ veml7700 ]
+
 i2c:
   sda: 21
   scl: 22
   scan: true
   id: bus_a
+
 
 globals:
   # Value to consider completely dry. Auto-calibrated.
@@ -63,6 +68,16 @@ light:
 
 
 sensor:
+  - platform: veml7700
+    address: 0x10
+    update_interval: 30s
+    gain: X1
+    integration_time: 100ms
+    glass_attenuation_factor: 1.0
+    ambient_light:
+      name: "Ambient light"
+    white:
+      name: "White"
   - platform: sht3xd
     address: 0x45
     update_interval: 60s
