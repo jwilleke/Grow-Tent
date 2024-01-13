@@ -32,6 +32,12 @@ wifi:
 
 captive_portal:
 
+i2c:
+  sda: 21
+  scl: 22
+  scan: true
+  id: bus_a
+
 globals:
   # Value to consider completely dry. Auto-calibrated.
   - id: dryValue
@@ -57,6 +63,15 @@ light:
 
 
 sensor:
+  - platform: sht3xd
+    address: 0x45
+    update_interval: 60s
+    temperature:
+      id: atemp
+      name: "Grow Tent Temperature"
+    humidity:
+      id: ahum
+      name: "Grow Tent Humidity"
   - platform: adc
     pin: GPIO36
     name: "sage"
