@@ -14,7 +14,6 @@
 #define SENSOR_TWO_PIN A1   //  A1-GPIO39
 #define SENSOR_THREE_PIN A2 // A2-GPIO34
 
-
 // The number of read loops since we started which is doen every THRESHOLD
 int16_t readCount = 0;
 // This it the last time the s`ensors were updated
@@ -159,14 +158,15 @@ void setup()
 void loop()
 {
   mqtt.loop();
-  // Update Read the sensors every THRESHOLD
+  /**
+   * @brief This is the time in milliseconds since the last time the sensors were updated.
+   */
   if (millis() - lastUpdateAt >= THRESHOLD)
   {
+    uint32_t uptimeValue = millis() / 1000;
     DEBUG_PRINT("Updating sensor value for uptimeSensor: ");
     readCount++;
     DEBUG_PRINTLN(readCount);
-    //uptimeSensor.setValue(readCount);
-    uint32_t uptimeValue = millis() / 1000;
     uptimeSensor.setValue(uptimeValue);
     // ignore the imitial readings as it takes time for the sensors to stabilize
     if (readCount > INITIAL_READER_COUNTER)
