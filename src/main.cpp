@@ -1,7 +1,13 @@
 #include <Arduino.h>
+#include <ArduinoHA.h>
+#include <arduino_secrets.h> // contains secret credentials and API keys for Arduino project.
+#include <WiFi.h>
+#include <WiFiClient.h>
 #include <Wire.h>
 #include <DFRobot_SHT3x.h>
 #include "DFRobot_VEML7700.h"
+#include <ha_functions.h>
+#include <ha_config.h>
 
 // https://dronebotworkshop.com/soil-moisture/
 #define SENSOR_ONE_PIN A0   // ESP32 pin GPIO36 (ADC0) that connects to AOUT pin of moisture sensor
@@ -9,6 +15,18 @@
 #define SENSOR_THREE_PIN A2 // A2-GPIO34
 #define THRESHOLD 5000      // CHANGE YOUR THRESHOLD HERE
 
+// The number of read loops since we started which is doen every THRESHOLD
+int16_t readCount = 0;
+// This it the last time the s`ensors were updated
+unsigned long lastUpdateAt = 0;
+unsigned long startupTime = millis();
+
+char ssid[] = SECRET_SSID; // your network SSID (name)
+char pass[] = SECRET_PASS; // your network password (use for WPA, or use as key for WEP)
+char mqttUser[] = MQTT_HA_BROKER_USERNAME;
+char mqttUserPass[] = MQTT_HA_BROKER_PASSWORD;
+char deviceName[] = "GrowTent";
+byte myId[] = {111, 111, 111, 111, 111, 111}; // mac address of the device
 /*
  * Instantiate an objects to drive the sensors
  */
@@ -16,10 +34,14 @@
 DFRobot_SHT3x sht3x;
 DFRobot_VEML7700 als;
 
-const int numReadings = 1000;
+HADevice device(myId, sizeof(myId));
 
-const int AIR_VALUE = 3000;  // you need to replace this value with 2500
-const int WATER_VALUE = 761; // you need to replace this value with 770 (0.93863 v)
+WiFiClient wifiClient;
+
+// assign the device and the sensor to the MQTT client and make the max number of sensors
+HAMqtt mqtt(wifiClient, device, MQTT_SENSOR_COUNT);
+
+const int numReadings = 1000;
 
 int readings[numReadings]; // the readings from the analog input
 int readIndex = 0;         // the index of the current reading
@@ -32,32 +54,40 @@ int lowestValue = 100000;
 int higestValue = 0;
 // analogReadResolution(12); // The Zero, Due, MKR family and Nano 33 (BLE and IoT) boards have 12-bit ADC capabilities
 
-int getPercentage(int value)
-{
-  // Determine soil moisture percentage value
-  value = map(value, AIR_VALUE, WATER_VALUE, 0, 100);
-  // Keep values between 0 and 100
-  value = constrain(value, 0, 100);
-  return value;
-}
+// ==================== SENSOR SENSOR DEFINITiON ====================
+// A sensor is a prt of this device that measures a physical quantity and converts it into a signal
+// The unique ID of the sensor. It needs to be unique in a scope of your device.
+HASensorNumber uptimeSensor("GT_uptime"); // "ardUptime"
+// "myAnalogInput" is unique ID of the sensor. You should define your own ID. (PrecisionP2 is points after the decimal point)
+HASensorNumber moisture1("Moisture_1", HASensorNumber::PrecisionP1);
+HASensorNumber moisture2("Moisture_2", HASensorNumber::PrecisionP1);
+HASensorNumber moisture3("Moisture_3", HASensorNumber::PrecisionP1);
+HASensorNumber moisture4("Moisture_4", HASensorNumber::PrecisionP1);
+HASensorNumber rh("RH", HASensorNumber::PrecisionP1);
+HASensorNumber aTemp("Ambient_Temperature", HASensorNumber::PrecisionP1);
+HASensorNumber lux("Lux", HASensorNumber::PrecisionP1);
 
+/**
+ * setup() is called once at the start of the program
+ */
 void setup()
 {
-  Serial.begin(115200); // open serial port, set the baud rate as 9600 bps
-  Wire.begin();
-  als.begin(); // Init
-  Serial.print("intervals: ");
-  Serial.println(intervals);
-  for (int thisReading = 0; thisReading < numReadings; thisReading++)
+  // DEBUG_INIT();
+  Serial.begin(SERIAL_BAUD_RATE);
+  Serial.println("Starting setup...");
+  // Serial.println("DNS and DHCP-based web client test 2024-02-04"); // so I can keep track of what is loaded start the Ethernet connection:connect to wifi
+
+  // ==================== Setup Action Pins ====================
+  // WiFi.config(ip, gateway, subnet);
+  WiFi.begin(ssid, pass);
+  while (WiFi.status() != WL_CONNECTED)
   {
-    readings[thisReading] = 0;
+    Serial.print(".");
+    delay(500); // waiting for the connection
   }
-  /**
-   * readSerialNumber Read the serial number of the chip.
-   * @return Return 32-digit serial number.
-   */
-  Serial.print("Chip serial number");
-  Serial.println(sht3x.readSerialNumber());
+  Serial.println();
+  Serial.println("Connected to the network");
+  // printCurrentNet(WiFi.SSID(), bssid, myId, WiFi.RSSI(), WiFi.encryptionType());
 
   /**
    * softReset Send command resets via IIC, enter the chip's default mode single-measure mode,
@@ -69,92 +99,116 @@ void setup()
   {
     Serial.println("Failed to Initialize the chip....");
   }
-  /**
-   * heaterEnable(): Turn on the heater inside the chip to enable the sensor get correct humidity value in wet environments.
-   * @return Read the status of the register to determine whether the command was executed successfully,
-   * and return true indicates success.
-   * @note Heaters should be used in wet environments, and other cases of use will result in incorrect readings
-   */
+  // Enable the heater so moiture does not condense on the sensor
+  sht3x.heaterEnable();
+  // set device's details (optional)
+  device.setSoftwareVersion("1.0.0");
+  device.setManufacturer("dfrobot");
+  device.setModel("firebeetle2_esp32e");
+  device.setName(deviceName);
+  // ...
+  device.enableSharedAvailability();
+  // device.setAvailability(false); // changes default state to offline
+  //  MQTT LWT (Last Will and Testament) is a feature of the MQTT protocol that allows a client to notify the broker of an ungracefully disconnected client.
+  device.enableLastWill();
+  // Discovery prefix is used to build the MQTT topic for the discovery messages.
+  mqtt.setDiscoveryPrefix("homeassistant"); // this is the default value
+  mqtt.setDataPrefix("aha");                // this is the default value
 
-  // if(!sht3x.heaterEnable()){
-  //  Serial.println("Failed to turn on the heater....");
-  // }
-  delay(5000);
+  // configure sensor (optional)
+  uptimeSensor.setIcon("mdi:mdi-av-timer");
+  uptimeSensor.setName("Uptime");
+  uptimeSensor.setUnitOfMeasurement("s");
+  //
+  moisture1.setIcon("mdi:water-percent");
+  moisture1.setName("Moisture Plant 1");
+  moisture1.setUnitOfMeasurement("%");
+  //
+  moisture2.setIcon("mdi:water-percent");
+  moisture2.setName("Moisture Plant 2");
+  moisture2.setUnitOfMeasurement("%");
+  //
+  moisture3.setIcon("mdi:water-percent");
+  moisture3.setName("Moisture Plant 3");
+  moisture3.setUnitOfMeasurement("%");
+  //
+  moisture4.setIcon("mdi:water-percent");
+  moisture4.setName("Moisture Plant 4");
+  moisture4.setUnitOfMeasurement("%");
+  //
+  rh.setIcon("mdi:water-percent");
+  rh.setName("Relative Humidity");
+  rh.setUnitOfMeasurement("%");
+  //
+  aTemp.setIcon("mdi:thermometer");
+  aTemp.setName("Ambient Temperature");
+  aTemp.setUnitOfMeasurement("°C");
+  //
+  lux.setIcon("mdi:weather-sunny");
+  lux.setName("Lux");
+  lux.setUnitOfMeasurement("lx");
+  // start the mqtt broker connection
+
+  // mqtt.begin(BROKER_ADDR, mqttUser, mqttUserPass);
+  mqtt.begin(BROKER_ADDR);
 }
 
+/**
+ * loop() is called repeatedly
+ */
 void loop()
 {
-  if (millis() - lastmillis >= THRESHOLD) // Update every THRESHOLD
+  mqtt.loop();
+  // Update Read the sensors every THRESHOLD
+  if (millis() - lastUpdateAt >= THRESHOLD)
   {
-    Serial.print("(");
-    Serial.print(readIndex);
-    Serial.println(") ");
-    // subtract the last reading:
-    total = total - readings[readIndex];
-    int soilMoistureValue = analogRead(SENSOR_ONE_PIN); // read the analog value from sensor
-    Serial.print("   Rosemary soilMoistureValue: ");
-    Serial.print(soilMoistureValue);
-    Serial.print(" soilMoisturePercentage: ");
-    Serial.println(getPercentage(soilMoistureValue));
-    readings[readIndex] = soilMoistureValue;
-    // Second or A1
-    int soilMoistureValue2 = analogRead(SENSOR_TWO_PIN); // read the analog value from sensor
-    Serial.print("   Sage soilMoistureValue: ");
-    Serial.print(soilMoistureValue2);
-    Serial.print(" soilMoisturePercentage: ");
-    Serial.println(getPercentage(soilMoistureValue2));
-
-    // Second or A1
-    int soilMoistureValue3 = analogRead(SENSOR_THREE_PIN); // read the analog value from sensor
-    Serial.print("   Parsley soilMoistureValue: ");
-    Serial.print(soilMoistureValue3);
-    Serial.print(" soilMoisturePercentage: ");
-    Serial.println(getPercentage(soilMoistureValue3));
-
-    // add the reading to the total:
-    total = total + readings[readIndex];
-    // advance to the next position in the array:
-    readIndex = readIndex + 1;
-
-    // if we're at the end of the array...
-    if (readIndex >= numReadings)
+    DEBUG_PRINT("Updating sensor value for uptimeSensor: ");
+    readCount++;
+    DEBUG_PRINTLN(readCount);
+    //uptimeSensor.setValue(readCount);
+    uint32_t uptimeValue = millis() / 1000;
+    uptimeSensor.setValue(uptimeValue);
+    // ignore the imitial readings as it takes time for the sensors to stabilize
+    if (readCount > INITIAL_READER_COUNTER)
     {
-      // ...wrap around to the beginning:
-      Serial.print("Rosemary average soilMoistureValue: ");
-      Serial.println(total / numReadings);
-      readIndex = 0;
-    }
+      // read from the sensor moisture1
+      int soilMoistureValue = analogRead(SENSOR_ONE_PIN); // read the analog value from sensor
+      DEBUG_PRINT("Updating moisture1 sensor value: ");
+      DEBUG_PRINTLN(soilMoistureValue);
+      moisture1.setValue(getPercentage(soilMoistureValue));
+      // read from the sensor moisture2
+      int soilMoistureValue2 = analogRead(SENSOR_TWO_PIN); // read the analog value from sensor
+      DEBUG_PRINT("Updating moisture2 sensor value: ");
+      DEBUG_PRINTLN(soilMoistureValue2);
+      moisture2.setValue(getPercentage(soilMoistureValue2));
+      // read from the sensor moisture3
+      int soilMoistureValue3 = analogRead(SENSOR_THREE_PIN); // read the analog value from sensor
+      DEBUG_PRINT("Updating moisture3 sensor value: ");
+      DEBUG_PRINTLN(soilMoistureValue3);
+      moisture3.setValue(getPercentage(soilMoistureValue3));
+      // read from the sensor moisture4
+      int soilMoistureValue4 = analogRead(SENSOR_THREE_PIN); // read the analog value from sensor
+      DEBUG_PRINT("Updating moisture4 sensor value: ");
+      DEBUG_PRINTLN(soilMoistureValue4);
+      moisture4.setValue(getPercentage(soilMoistureValue4));
+      // read from the relative humidity sensor
+      rh.setValue(sht3x.getHumidityRH());
+      DEBUG_PRINT("Rleative Humidity sensor value: ");
+      DEBUG_PRINTLN(sht3x.getHumidityRH());
 
-    // calculate the average:
-    average = total / numReadings;
+      // read from the temperature sensor
+      aTemp.setValue(sht3x.getTemperatureC());
+      DEBUG_PRINT("Ambient Temperature sensor value: ");
+      DEBUG_PRINTLN(sht3x.getHumidityRH());
 
-    // Get Temperature and Humidity
-    Serial.print("   Ambient Temperature(°C/F):");
-    /**
-     * getTemperatureC Get the meansured temperature(℃).
-     * @return Return float temperature data.
-     */
-    Serial.print(sht3x.getTemperatureC());
-    Serial.print(" C/");
-    /**
-     * getTemperatureF:Get the meansured temperature(℉).
-     * @return Return float temperature data.
-     */
-    Serial.print(sht3x.getTemperatureF());
-    Serial.println(" F ");
-    Serial.print("   Relative Humidity(%RH):");
-    /**
-     * getHumidityRH: Get the meansured humidity (%RH)
-     * @return Return float humidity data
-     */
-    Serial.print(sht3x.getHumidityRH());
-    Serial.printl(" %RH");
-    float lux;
-
-    als.getALSLux(lux); // Get the measured ambient light value
-    Serial.print("   Lux:");
-    Serial.print(lux);
-    Serial.println(" lx");
-    lastmillis = millis();
-  }
-}
+      // read from the light sensor
+      float luxValue;
+      als.getALSLux(luxValue);
+      lux.setValue(luxValue);
+      DEBUG_PRINT("Lux sensor value: ");
+      DEBUG_PRINTLN(luxValue);
+      // reset loop timer
+      lastUpdateAt = millis();
+    } // end of if readCount
+  }   // end of if millis
+} // end of loop
