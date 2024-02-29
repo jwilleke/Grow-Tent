@@ -13,7 +13,7 @@
 #define SENSOR_ONE_PIN A0   // ESP32 pin GPIO36 (ADC0) that connects to AOUT pin of moisture sensor
 #define SENSOR_TWO_PIN A1   //  A1-GPIO39
 #define SENSOR_THREE_PIN A2 // A2-GPIO34
-#define THRESHOLD 5000      // CHANGE YOUR THRESHOLD HERE
+
 
 // The number of read loops since we started which is doen every THRESHOLD
 int16_t readCount = 0;
@@ -116,7 +116,7 @@ void setup()
   mqtt.setDataPrefix("aha");                // this is the default value
 
   // configure sensor (optional)
-  uptimeSensor.setIcon("mdi:mdi-av-timer");
+  uptimeSensor.setIcon("mdi:timer");
   uptimeSensor.setName("Uptime");
   uptimeSensor.setUnitOfMeasurement("s");
   //
