@@ -56,7 +56,7 @@ int higestValue = 0;
 // ==================== SENSOR SENSOR DEFINITiON ====================
 // A sensor is a prt of this device that measures a physical quantity and converts it into a signal
 // The unique ID of the sensor. It needs to be unique in a scope of your device.
-HASensorNumber uptimeSensor("GT_uptime"); // "ardUptime"
+HASensorNumber uptimeSensor("GT_uptime");
 // "myAnalogInput" is unique ID of the sensor. You should define your own ID. (PrecisionP2 is points after the decimal point)
 HASensorNumber moisture1("Moisture_1", HASensorNumber::PrecisionP1);
 HASensorNumber moisture2("Moisture_2", HASensorNumber::PrecisionP1);
