@@ -85,8 +85,9 @@ void setup()
     delay(500); // waiting for the connection
   }
   Serial.println();
+
   Serial.println("Connected to the network");
-  // printCurrentNet(WiFi.SSID(), bssid, myId, WiFi.RSSI(), WiFi.encryptionType());
+  printCurrentNet((byte*)ssid,  WiFi.BSSID(), myId, -50, 1,  sizeof(ssid), sizeof(WiFi.BSSID()), sizeof(myId));
 
   /**
    * softReset Send command resets via IIC, enter the chip's default mode single-measure mode,
@@ -149,7 +150,7 @@ void setup()
   // start the mqtt broker connection
 
   // mqtt.begin(BROKER_ADDR, mqttUser, mqttUserPass);
-  mqtt.begin(BROKER_ADDR);
+  mqtt.begin(BROKER_ADDR, mqttUser, mqttUserPass);
 }
 
 /**
