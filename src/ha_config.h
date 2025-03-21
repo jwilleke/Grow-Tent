@@ -7,7 +7,7 @@
 #define SERIAL_BAUD_RATE 115200
 
 #define ANALOG_SUPPLY_VOLTAGE 5.0
-#define BROKER_ADDR IPAddress(192, 168, 68, 122)
+#define BROKER_ADDR IPAddress(192, 168, 68, 27)
 
 #define MQTT_SENSOR_COUNT 12
 
