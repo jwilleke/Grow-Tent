@@ -46,4 +46,4 @@ We will scale from 0-100% and this code seems to work well and auto adjust the s
           return (x - id(dryValue)) * (100 - 0) / (id(wetValue) - id(dryValue)) + 0;
 ```
 
-Our intent is to use home assistant to inturprut the poits where the plants require water.
+Our intent is to use home assistant to inturprut the pots where the plants require water.
