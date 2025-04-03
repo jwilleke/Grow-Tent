@@ -25,7 +25,8 @@ char pass[] = SECRET_PASS; // your network password (use for WPA, or use as key 
 char mqttUser[] = MQTT_HA_BROKER_USERNAME;
 char mqttUserPass[] = MQTT_HA_BROKER_PASSWORD;
 char deviceName[] = "GrowTent";
-byte myId[] = {111, 111, 111, 111, 111, 111}; // mac address of the device
+// growtent: 64:b7:08:2e:5d:14
+byte MAC_ADDRESS[] = {0x64, 0xb7, 0x08, 0x2e, 0x5d, 0x14}; // mac address of the device
 /*
  * Instantiate an objects to drive the sensors
  */
@@ -33,7 +34,8 @@ byte myId[] = {111, 111, 111, 111, 111, 111}; // mac address of the device
 DFRobot_SHT3x sht3x;
 DFRobot_VEML7700 als;
 
-HADevice device(myId, sizeof(myId));
+// Define home assistant device
+HADevice device(MAC_ADDRESS, sizeof(MAC_ADDRESS));
 
 WiFiClient wifiClient;
 

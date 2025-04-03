@@ -4,7 +4,10 @@
 */
 #pragma once
 
+// My Short cuts and specific data
 #define SERIAL_BAUD_RATE 115200
+
+#define DEBUG_PRINT_ENABLED // Comment out this line of code if you don't want to see the debug print
 
 #define ANALOG_SUPPLY_VOLTAGE 5.0
 #define BROKER_ADDR IPAddress(192, 168, 68, 27)
