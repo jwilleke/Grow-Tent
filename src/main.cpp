@@ -24,9 +24,8 @@ char ssid[] = SECRET_SSID; // your network SSID (name)
 char pass[] = SECRET_PASS; // your network password (use for WPA, or use as key for WEP)
 char mqttUser[] = MQTT_HA_BROKER_USERNAME;
 char mqttUserPass[] = MQTT_HA_BROKER_PASSWORD;
-char deviceName[] = "GrowTent";
-// growtent: 64:b7:08:2e:5d:14
-byte MAC_ADDRESS[] = {0x64, 0xb7, 0x08, 0x2e, 0x5d, 0x14}; // mac address of the device
+char deviceName[] = DEVICENAME;
+byte MAC_BYTE_ADDRESS[] = MAC_ADDRESS; // mac address of the device
 /*
  * Instantiate an objects to drive the sensors
  */
@@ -35,11 +34,11 @@ DFRobot_SHT3x sht3x;
 DFRobot_VEML7700 als;
 
 // Define home assistant device
-HADevice device(MAC_ADDRESS, sizeof(MAC_ADDRESS));
+HADevice device(MAC_BYTE_ADDRESS, sizeof(MAC_BYTE_ADDRESS));
 
 WiFiClient wifiClient;
 
-// assign the device and the sensor to the MQTT client and make the max number of sensors
+// MQtt Client Setup
 HAMqtt mqtt(wifiClient, device, MQTT_SENSOR_COUNT);
 
 const int numReadings = 1000;
@@ -79,7 +78,8 @@ void setup()
   // Serial.println("DNS and DHCP-based web client test 2024-02-04"); // so I can keep track of what is loaded start the Ethernet connection:connect to wifi
 
   // ==================== Setup Action Pins ====================
-  // WiFi.config(ip, gateway, subnet);
+  // Init WiFi network:
+
   WiFi.begin(ssid, pass);
   while (WiFi.status() != WL_CONNECTED)
   {
@@ -88,8 +88,6 @@ void setup()
   }
   Serial.println();
 
-  Serial.println("Connected to the network");
-  printCurrentNet((byte*)ssid,  WiFi.BSSID(), myId, -50, 1,  sizeof(ssid), sizeof(WiFi.BSSID()), sizeof(myId));
 
   /**
    * softReset Send command resets via IIC, enter the chip's default mode single-measure mode,
@@ -103,12 +101,13 @@ void setup()
   }
   // Enable the heater so moiture does not condense on the sensor
   sht3x.heaterEnable();
-  // set device's details (optional)
+  
+  // set MQTT device's details (optional)
   device.setSoftwareVersion("1.0.0");
   device.setManufacturer("dfrobot");
   device.setModel("firebeetle2_esp32e");
   device.setName(deviceName);
-  // ...
+  // 
   device.enableSharedAvailability();
   // device.setAvailability(false); // changes default state to offline
   //  MQTT LWT (Last Will and Testament) is a feature of the MQTT protocol that allows a client to notify the broker of an ungracefully disconnected client.

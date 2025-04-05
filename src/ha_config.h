@@ -4,19 +4,32 @@
 */
 #pragma once
 
-// My Short cuts and specific data
+// ==================== OPERATIONAL SPECIFICS ====================
 #define SERIAL_BAUD_RATE 115200
 
 #define DEBUG_PRINT_ENABLED // Comment out this line of code if you don't want to see the debug print
 
-#define ANALOG_SUPPLY_VOLTAGE 5.0
-#define BROKER_ADDR IPAddress(192, 168, 68, 27)
-
-#define MQTT_SENSOR_COUNT 12
 
 #define INITIAL_READER_COUNTER 200
 #define INITIAL_READER_COUNTER 200
 #define THRESHOLD 5000      // CHANGE YOUR THRESHOLD HERE
+
+// ==================== MQTT SPECIFICS ====================
+#define BROKER_ADDR IPAddress(192, 168, 68, 27) // MQTT broker address  
+#define MQTT_BROKER_PORT 1883                    // MQTT broker port
+
+// ==================== DEVICE SPECIFICS ====================
+#define ANALOG_SUPPLY_VOLTAGE 5.0
+// growtent: 64:b7:08:2e:5d:14
+#define MAC_ADDRESS {0x30, 0xAE, 0xA4, 0xB2, 0xC3, 0xD4} // The MAC address of this device
+#define DEVICENAME "GrowTent"; // This Host device name
+#define PLATFORM "espressif32" // This is the platform name
+#define BOARD_MODEL "dfrobot_firebeetle2_esp32e" // This is the board model name
+#define HOSTNAME "nutrient-tank.nerdsbythehour.com"
+#define FRAMEWORK "arduino" // This is the framework name
+
+// ==================== SENSOR SPECIFICS ====================
+#define MQTT_SENSOR_COUNT 12
 /*
 Hardware ping addreses
 Sensor pin settings
@@ -50,10 +63,11 @@ Sensor pin settings
 #define ECRES2 820.0
 #define ECREF 200.0
 
+
 const int AIR_VALUE = 3000;  // you need to replace this value with 2500
 const int WATER_VALUE = 761; // you need to replace this value with 770 (0.93863 v)
 
-#define DEBUG_PRINT_ENABLED // Comment out this line of code if you don't want to see the debug print
+// ==================== DEBUG SPECIFICS ====================
 
 #if defined(DEBUG_PRINT_ENABLED)
   #define DEBUG_INIT() Serial.begin(SERIAL_BAUD_RATE);
